@@ -41,7 +41,6 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,20 +66,24 @@ import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(navController: NavHostController,schoolsViewModel: SchoolsViewModel = hiltViewModel()) {
+fun HomeScreen(
+    navController: NavHostController,
+    schoolsViewModel: SchoolsViewModel = hiltViewModel()
+) {
     val context = LocalContext.current // Getting current context for Internet Connectivity check
-    val checkInternet = remember { mutableStateOf(checkInternetConnectivity(context)) } // Checking internet connectivity
-    val retryTrigger = remember { mutableIntStateOf(0) } // Trigger for retrying after active internet connectivity
+    val checkInternet =
+        remember { mutableStateOf(checkInternetConnectivity(context)) } // Checking internet connectivity
+    val retryTrigger =
+        remember { mutableIntStateOf(0) } // Trigger for retrying after active internet connectivity
     val searchQuery = schoolsViewModel.searchQuery
 
     // Launching an effect to check internet connectivity and get the list if internet is available
     LaunchedEffect(retryTrigger.intValue) {
         checkInternet.value = checkInternetConnectivity(context)
-        if(checkInternet.value) {
+        if (checkInternet.value) {
             schoolsViewModel.setLoading(true)
             schoolsViewModel.getNYCSchoolsList()
-        }
-        else {
+        } else {
             schoolsViewModel.setLoading(true)
             delay(3000) // Delay of 3 seconds before showing the retry button
             schoolsViewModel.setLoading(false)
@@ -88,11 +91,11 @@ fun HomeScreen(navController: NavHostController,schoolsViewModel: SchoolsViewMod
     }
 
     // If internet is available, displaying the list of schools, else displaying the message with retry option
-    if(checkInternet.value) {
+    if (checkInternet.value) {
         Surface {
             Column {
                 Header() // Display the header
-                IndeterminateCircularIndicator(remember{schoolsViewModel.loadingIndicatorState}) // Display loading indicator while fetching data
+                IndeterminateCircularIndicator(remember { schoolsViewModel.loadingIndicatorState }) // Display loading indicator while fetching data
                 TextField(
                     value = searchQuery.value,
                     onValueChange = { newValue -> searchQuery.value = newValue },
@@ -101,38 +104,54 @@ fun HomeScreen(navController: NavHostController,schoolsViewModel: SchoolsViewMod
                         .fillMaxWidth()
                         .padding(16.dp)
                 )
-                Spacer(modifier = Modifier
-                    .height(4.dp)
-                    .fillMaxWidth(1f)) // Add a spacer for better UI
+                Spacer(
+                    modifier = Modifier
+                        .height(4.dp)
+                        .fillMaxWidth(1f)
+                ) // Add a spacer for better UI
                 Column(modifier = Modifier.fillMaxHeight(1f)) {
-                    LazyColumn{
+                    LazyColumn {
 
-                        items(schoolsViewModel.filteredSchoolList.value.size) {index ->
-                            SchoolListItem(schoolsViewModel.filteredSchoolList.value[index],{
-                                //To do a phone call
-                                navController.context.startActivity(Intent.createChooser(Intent(Intent.ACTION_CALL,Uri.parse("tel:+1$it")), "NYC Schools"))
-                            }){ item ->
-                                navController.currentBackStackEntry?.savedStateHandle?.set(Utils.NavUtils.SCHOOL_DBN,item)
+                        items(schoolsViewModel.filteredSchoolList.value.size) { index ->
+                            SchoolListItem(schoolItem = schoolsViewModel.filteredSchoolList.value[index],
+                                onPhoneNumberClick = {
+                                    //To do a phone call
+                                    navController.context.startActivity(
+                                        Intent.createChooser(
+                                            Intent(
+                                                Intent.ACTION_CALL,
+                                                Uri.parse("tel:+1$it")
+                                            ), "NYC Schools"
+                                        )
+                                    )
+                                }
+                            ) { item ->
+                                navController.currentBackStackEntry?.savedStateHandle?.
+                                    set(Utils.NavUtils.SCHOOL_DBN, item)
+
                                 navController.navigate(Utils.ScreenUtils.SCHOOL_INFO)
                             }
                             Spacer(modifier = Modifier.height(4.dp))
                         }
                     }
-                    Spacer(modifier = Modifier
-                        .height(4.dp)
-                        .fillMaxWidth(1f))
+                    Spacer(
+                        modifier = Modifier
+                            .height(4.dp)
+                            .fillMaxWidth(1f)
+                    )
                 }
             }
         }
-    }else{
+    } else {
         Surface(modifier = Modifier.fillMaxSize(), color = Color.LightGray) {
-            Column(modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                IndeterminateCircularIndicator(remember{schoolsViewModel.loadingIndicatorState}) // Display loading indicator while fetching data
+                IndeterminateCircularIndicator(remember { schoolsViewModel.loadingIndicatorState }) // Display loading indicator while fetching data
                 Text(
                     text = "No Internet connection",
                     style = MaterialTheme.typography.headlineMedium,
@@ -151,7 +170,7 @@ fun HomeScreen(navController: NavHostController,schoolsViewModel: SchoolsViewMod
 @Composable
 fun IndeterminateCircularIndicator(loadingIndicatorState: MutableState<Boolean>) {
     if (!loadingIndicatorState.value) return // If not loading, return without displaying anything
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center){
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator(
             modifier = Modifier
                 .width(64.dp)
@@ -170,7 +189,8 @@ fun PreviewIndeterminateCircularIndicator() {
 
 // Function to check internet connectivity. Returns true if either Wi-Fi or Cellular network is available.
 fun checkInternetConnectivity(context: Context): Boolean {
-    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    val connectivityManager =
+        context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     val network = connectivityManager.activeNetwork ?: return false
     val activeNetwork = connectivityManager.getNetworkCapabilities(network) ?: return false
     return when {
@@ -181,8 +201,10 @@ fun checkInternetConnectivity(context: Context): Boolean {
 }
 
 @Composable
-fun SchoolListItem(schoolItem: SchoolListItem, onPhoneNumberClick:(phoneNumber:String) ->Unit,
-                   onSchoolItemClick:(schoolItem:SchoolListItem) -> Unit) {
+fun SchoolListItem(
+    schoolItem: SchoolListItem, onPhoneNumberClick: (phoneNumber: String) -> Unit,
+    onSchoolItemClick: (schoolItem: SchoolListItem) -> Unit
+) {
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp // Get the current screen width
     val paddingWidth = screenWidth * 0.05f // Calculate the padding width
 
@@ -204,14 +226,14 @@ fun SchoolListItem(schoolItem: SchoolListItem, onPhoneNumberClick:(phoneNumber:S
                 .padding(horizontal = 5.dp, vertical = 5.dp)
         ) {//Row alignment of School Data with Icons
             Row(verticalAlignment = Alignment.CenterVertically) {
-                setIcon(imgVector = Icons.Default.Home, description = "School Name")
+                SetIcon(imgVector = Icons.Default.Home, description = "School Name")
                 Spacer(Modifier.width(5.dp))
                 Text(
                     //Displaying Placeholder if data is null or empty
-                    text = if(schoolItem.school_name.isEmpty()) "No School Found" else " ${schoolItem.school_name}" ,
+                    text = if (schoolItem.school_name.isEmpty()) "No School Found" else " ${schoolItem.school_name}",
                     fontWeight = FontWeight.Bold,
                     fontSize = 20.sp,
-                    color = if(schoolItem.school_name.isEmpty()) Color.Red else Color.Black,
+                    color = if (schoolItem.school_name.isEmpty()) Color.Red else Color.Black,
                     modifier = Modifier
                         .padding(vertical = 4.dp)
                         .fillMaxWidth(1f),
@@ -220,26 +242,26 @@ fun SchoolListItem(schoolItem: SchoolListItem, onPhoneNumberClick:(phoneNumber:S
             }
             Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                setIcon(imgVector = Icons.Default.Email, description = "Email ID")
+                SetIcon(imgVector = Icons.Default.Email, description = "Email ID")
                 Spacer(Modifier.width(5.dp))
                 Text(
                     //Displaying Placeholder if data is null or empty and with Red color
-                    text =  if(schoolItem.school_email.isNullOrEmpty()) "No Email Found" else " ${schoolItem.school_email}",
-                    color = if(schoolItem.school_email.isNullOrEmpty()) Color.Red else Color.Black,
+                    text = if (schoolItem.school_email.isNullOrEmpty()) "No Email Found" else " ${schoolItem.school_email}",
+                    color = if (schoolItem.school_email.isNullOrEmpty()) Color.Red else Color.Black,
                     fontSize = 16.sp
                 )
             }
             Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                setIcon(imgVector = Icons.Default.Phone, description = "Phone Number")
+                SetIcon(imgVector = Icons.Default.Phone, description = "Phone Number")
                 Spacer(Modifier.width(5.dp))
                 Text(//Displaying Placeholder if data is null or empty
-                    text = if(schoolItem.phone_number.isNullOrEmpty()) "No Phone Found" else " ${schoolItem.phone_number}",
+                    text = if (schoolItem.phone_number.isNullOrEmpty()) "No Phone Found" else " ${schoolItem.phone_number}",
                     color = Color.Blue,
                     fontSize = 16.sp,
                     style = TextStyle(textDecoration = TextDecoration.Underline),
                     modifier =
-                    if(schoolItem.phone_number.isNullOrEmpty())
+                    if (schoolItem.phone_number.isNullOrEmpty())
                         Modifier
                             .border(2.dp, Color.Red, RoundedCornerShape(5.dp))
                             .padding(horizontal = 3.dp, vertical = 2.dp)
@@ -252,28 +274,28 @@ fun SchoolListItem(schoolItem: SchoolListItem, onPhoneNumberClick:(phoneNumber:S
                             .background(Color(0xFFB2C6D5))
                 )
                 Spacer(Modifier.width(90.dp))
-                Row (verticalAlignment = Alignment.CenterVertically){
-                    setIcon(imgVector = Icons.Default.Person, description = "Total Students")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    SetIcon(imgVector = Icons.Default.Person, description = "Total Students")
                     Spacer(Modifier.width(2.dp))
                     Text(//Displaying Placeholder if data is null or empty
-                        text = if(schoolItem.total_students.isNullOrEmpty()) "N/A" else schoolItem.total_students,
-                        color = if(schoolItem.total_students.isNullOrEmpty()) Color.Red else Color.Black,
+                        text = if (schoolItem.total_students.isNullOrEmpty()) "N/A" else schoolItem.total_students,
+                        color = if (schoolItem.total_students.isNullOrEmpty()) Color.Red else Color.Black,
                         fontSize = 16.sp
                     )
                 }
             }
             Spacer(Modifier.height(4.dp))
-            Row (horizontalArrangement = Arrangement.End){
-                setIcon(Icons.Default.LocationOn,"Location")
+            Row(horizontalArrangement = Arrangement.End) {
+                SetIcon(Icons.Default.LocationOn, "Location")
                 Spacer(Modifier.width(5.dp))
                 Text(//Displaying Placeholder if data is null or empty
-                    text = if(schoolItem.city.isNullOrEmpty()) "N/A," else " ${schoolItem.city},",
-                    color = if(schoolItem.city.isNullOrEmpty()) Color.Red else Color.Black,
+                    text = if (schoolItem.city.isNullOrEmpty()) "N/A," else " ${schoolItem.city},",
+                    color = if (schoolItem.city.isNullOrEmpty()) Color.Red else Color.Black,
                     fontSize = 16.sp
                 )
                 Text(//Displaying Placeholder if data is null or empty
-                    text = if(schoolItem.state_code.isNullOrEmpty()) "N/A" else " ${schoolItem.state_code}",
-                    color = if(schoolItem.state_code.isNullOrEmpty()) Color.Red else Color.Black,
+                    text = if (schoolItem.state_code.isNullOrEmpty()) "N/A" else " ${schoolItem.state_code}",
+                    color = if (schoolItem.state_code.isNullOrEmpty()) Color.Red else Color.Black,
                     fontSize = 16.sp
                 )
             }
@@ -283,7 +305,7 @@ fun SchoolListItem(schoolItem: SchoolListItem, onPhoneNumberClick:(phoneNumber:S
 }
 
 @Composable
-fun setIcon( imgVector : ImageVector, description : String){
+fun SetIcon(imgVector: ImageVector, description: String) {
     Icon(
         imageVector = imgVector,
         contentDescription = description,
